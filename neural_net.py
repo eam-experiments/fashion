@@ -188,8 +188,6 @@ def train_network(prefix, es):
         testing_labels = to_categorical(testing_labels)
 
         rmse = tf.keras.metrics.RootMeanSquaredError()
-        input_data = Input(shape=(dataset.columns, dataset.rows, 1))
-
         input_enc, encoded = get_encoder()
         encoder = Model(input_enc, encoded)
         encoder.compile(optimizer = 'adam')
@@ -203,18 +201,15 @@ def train_network(prefix, es):
         input_dec, decoded = get_decoder()
         decoder = Model(input_dec, decoded)
         decoder.compile(
-            optimizer = 'adam', loss = 'mean_squared_error', metrics = rmse)
+            optimizer = 'adam', loss = 'huber', metrics = rmse)
         decoder.summary()
-        encoded = encoder(input_data)
-        decoded = decoder(encoded)
-        classified = classifier(encoded)
-        full_classifier = Model(inputs=input_data, outputs=classified)
+        full_classifier = Model(inputs=input_enc, outputs=classified)
         full_classifier.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = 'accuracy') 
-        autoencoder = Model(inputs = input_data, outputs=decoded)
+        autoencoder = Model(inputs=input_enc, outputs=decoded)
         autoencoder.compile(loss='huber', optimizer='adam', metrics=rmse)
 
-        model = Model(inputs=input_data, outputs=[classified, decoded])
-        model.compile(loss=['categorical_crossentropy', 'mean_squared_error'],
+        model = Model(inputs=input_enc, outputs=[classified, decoded])
+        model.compile(loss=['categorical_crossentropy', 'huber'],
                     optimizer='adam',
                     metrics={'model_1': 'accuracy', 'model_2': rmse})
         model.summary()
